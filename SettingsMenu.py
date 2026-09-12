@@ -209,7 +209,11 @@ class SettingsMenu:
                             self.alert.alert("Username & Password are invalid")
                             print("Username & Password are invalid")
                         elif self.password_text == '' and self.username_text != '':
-                            invalid_username = updateUsername(self.username, self.username_text)
+                            # updateUsername() returns True on SUCCESS (False if the
+                            # name is taken/invalid) -- this used to treat that return
+                            # value as "invalid" directly, so a successful rename showed
+                            # the failure alert and a rejected rename showed "updated!".
+                            invalid_username = not updateUsername(self.username, self.username_text)
                             if invalid_username:
                                 self.alert.alert("Username is already taken or invalid")
                                 print("Username is already taken or invalid")
@@ -218,7 +222,12 @@ class SettingsMenu:
                                 print("Username updated!")
                                 self.alert.alert("Username updated!")
                         elif self.username_text == '' and self.password_text != '':  # or
-                            invalid_password = updatePassword(self.username_text, hashPassword(self.password_text))
+                            # Same inverted-boolean issue as updateUsername above, plus this
+                            # was looking the account up by self.username_text -- which is
+                            # empty in this branch -- instead of the logged-in self.username,
+                            # so it always failed to find the row and silently never updated
+                            # the password while still claiming success.
+                            invalid_password = not updatePassword(self.username, hashPassword(self.password_text))
                             if invalid_password:
                                 self.alert.alert("Password is invalid")
                                 print("Password is invalid")
@@ -228,8 +237,11 @@ class SettingsMenu:
                                 self.alert.alert("Password updated!")
 
                         elif self.username_text != '' and self.password_text != '':  # or self.settings_state.password == '':
-                            invalid_password = updatePassword(self.username_text, hashPassword(self.password_text))
-                            invalid_username = updateUsername(self.username, self.username_text)
+                            # Password must be updated first, while the row is still keyed
+                            # by the *current* username -- updateUsername() below renames
+                            # it, after which a lookup by self.username would fail.
+                            invalid_password = not updatePassword(self.username, hashPassword(self.password_text))
+                            invalid_username = not updateUsername(self.username, self.username_text)
                             if invalid_password and not invalid_username:
                                 self.alert.alert("Password is invalid")
                                 print("Password is invalid")

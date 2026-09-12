@@ -67,7 +67,9 @@ def updateUsername(username, newUsername):
         return False
     cursor.execute("SELECT * FROM users WHERE name = ?", (username,))
     if cursor.fetchone():
-        cursor.execute("UPDATE users SET name = ?", (newUsername,))
+        # This used to omit the WHERE clause, which meant every account's
+        # name was overwritten with newUsername instead of just this one.
+        cursor.execute("UPDATE users SET name = ? WHERE name = ?", (newUsername, username))
         db.commit()
         return True
     else:
